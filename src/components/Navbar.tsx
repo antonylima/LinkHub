@@ -13,6 +13,8 @@ import {
   X,
   Bookmark,
   Menu,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import type { ThemeMode } from '../hooks/useTheme';
 
@@ -26,6 +28,8 @@ interface Props {
   onOpenAddLink: () => void;
   onOpenImportExport: () => void;
   onToggleMobileSidebar: () => void;
+  isAdmin: boolean;
+  onToggleAdmin: () => void;
 }
 
 export const Navbar: React.FC<Props> = ({
@@ -38,6 +42,8 @@ export const Navbar: React.FC<Props> = ({
   onOpenAddLink,
   onOpenImportExport,
   onToggleMobileSidebar,
+  isAdmin,
+  onToggleAdmin,
 }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -160,24 +166,60 @@ export const Navbar: React.FC<Props> = ({
             )}
           </button>
 
-          {/* Backup Button */}
+          {/* Admin Lock / Unlock Toggle Button */}
           <button
-            onClick={onOpenImportExport}
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            title="Importar ou Exportar Links"
+            onClick={onToggleAdmin}
+            className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              isAdmin
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 shadow-xs'
+                : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+            title={isAdmin ? 'Modo Administrador Ativo (Clique para opções/bloquear)' : 'Modo Leitura (Clique para desbloquear edição)'}
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Backup</span>
+            {isAdmin ? (
+              <>
+                <Unlock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span className="hidden lg:inline text-[11px]">Admin</span>
+              </>
+            ) : (
+              <>
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                <span className="hidden lg:inline text-[11px]">Bloqueado</span>
+              </>
+            )}
           </button>
 
+          {/* Backup Button (Only active if admin) */}
+          {isAdmin && (
+            <button
+              onClick={onOpenImportExport}
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Importar ou Exportar Links"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Backup</span>
+            </button>
+          )}
+
           {/* Add Link Button */}
-          <button
-            onClick={onOpenAddLink}
-            className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-sm shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Novo Link</span>
-          </button>
+          {isAdmin ? (
+            <button
+              onClick={onOpenAddLink}
+              className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-sm shadow-indigo-500/25 transition-all hover:shadow-indigo-500/40 flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Novo Link</span>
+            </button>
+          ) : (
+            <button
+              onClick={onToggleAdmin}
+              className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold transition-all flex items-center gap-1.5"
+              title="Desbloquear para adicionar links"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Editar</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

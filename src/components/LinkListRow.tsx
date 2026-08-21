@@ -21,6 +21,7 @@ interface Props {
   onToggleFavorite: (id: string) => void;
   onIncrementClicks: (id: string) => void;
   onSelectTag?: (tag: string) => void;
+  isAdmin?: boolean;
 }
 
 export const LinkListRow: React.FC<Props> = ({
@@ -31,6 +32,7 @@ export const LinkListRow: React.FC<Props> = ({
   onToggleFavorite,
   onIncrementClicks,
   onSelectTag,
+  isAdmin = false,
 }) => {
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -54,9 +56,9 @@ export const LinkListRow: React.FC<Props> = ({
   return (
     <div
       onClick={handleCardClick}
-      className="group flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/60 hover:shadow-md transition-all duration-150 cursor-pointer gap-3"
+      className="group flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/60 hover:shadow-xs transition-all duration-150 cursor-pointer gap-2.5"
     >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -69,37 +71,32 @@ export const LinkListRow: React.FC<Props> = ({
           }`}
           title={link.isFavorite ? 'Remover dos favoritos' : 'Favoritar link'}
         >
-          <Star className={`w-4 h-4 ${link.isFavorite ? 'fill-amber-400' : ''}`} />
+          <Star className={`w-3.5 h-3.5 ${link.isFavorite ? 'fill-amber-400' : ''}`} />
         </button>
 
-        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
+        <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
           {!imgError && faviconUrl ? (
             <img
               src={faviconUrl}
               alt={link.title}
               onError={() => setImgError(true)}
-              className="w-4.5 h-4.5 object-contain"
+              className="w-4 h-4 object-contain"
               loading="lazy"
             />
           ) : (
-            <Globe className="w-4 h-4 text-slate-400" />
+            <Globe className="w-3.5 h-3.5 text-slate-400" />
           )}
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+            <span className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
               {link.title}
             </span>
             <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden md:inline">
               ({domain})
             </span>
           </div>
-          {link.description && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xl">
-              {link.description}
-            </p>
-          )}
         </div>
       </div>
 
@@ -109,10 +106,10 @@ export const LinkListRow: React.FC<Props> = ({
       >
         {category && (
           <span
-            className={`hidden lg:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-medium ${catColor.bg} ${catColor.text}`}
+            className={`hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${catColor.bg} ${catColor.text}`}
           >
             {renderCategoryIcon(category.icon, 'w-3 h-3')}
-            <span className="truncate max-w-[100px]">{category.name}</span>
+            <span className="truncate max-w-[90px]">{category.name}</span>
           </span>
         )}
 
@@ -133,7 +130,7 @@ export const LinkListRow: React.FC<Props> = ({
         {link.clicks > 0 && (
           <span
             title={`Acessado ${link.clicks} vezes`}
-            className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 font-mono"
+            className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500 font-mono"
           >
             <MousePointerClick className="w-3 h-3" />
             {link.clicks}
@@ -153,21 +150,25 @@ export const LinkListRow: React.FC<Props> = ({
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
 
-          <button
-            onClick={() => onEdit(link)}
-            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-            title="Editar link"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => onEdit(link)}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                title="Editar link"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
 
-          <button
-            onClick={() => onDelete(link.id)}
-            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
-            title="Excluir link"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+              <button
+                onClick={() => onDelete(link.id)}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                title="Excluir link"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
 
           <a
             href={formatUrl(link.url)}
@@ -175,7 +176,7 @@ export const LinkListRow: React.FC<Props> = ({
             rel="noopener noreferrer"
             onClick={() => onIncrementClicks(link.id)}
             title="Abrir link"
-            className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 transition-colors ml-1"
+            className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 transition-colors ml-0.5"
           >
             <ExternalLink className="w-3.5 h-3.5" />
           </a>

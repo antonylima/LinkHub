@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLinks } from './hooks/useLinks';
 import { useTheme } from './hooks/useTheme';
+import { useAdmin } from './hooks/useAdmin';
 import type { LinkItem, Category } from './types';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
@@ -12,6 +13,7 @@ import { LinkModal } from './components/LinkModal';
 import { CategoryModal } from './components/CategoryModal';
 import { ImportExportModal } from './components/ImportExportModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
+import { AdminModal } from './components/AdminModal';
 import { EmptyState } from './components/EmptyState';
 import { ToastContainer } from './components/ToastContainer';
 import { renderCategoryIcon, getCategoryColor } from './utils/iconHelper';
@@ -44,6 +46,7 @@ export default function App() {
     viewMode,
     setViewMode,
     toasts,
+    showToast,
     removeToast,
     addLink,
     updateLink,
@@ -57,6 +60,19 @@ export default function App() {
     resetToDemo,
     clearAllData,
   } = useLinks();
+
+  const {
+    isAdmin,
+    isModalOpen: isAdminModalOpen,
+    modalMode: adminModalMode,
+    openAdminModal,
+    closeAdminModal,
+    unlock,
+    lock,
+    setMasterPassword,
+    changePassword,
+    resetPassword,
+  } = useAdmin();
 
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
@@ -80,11 +96,19 @@ export default function App() {
   });
 
   const handleOpenAddLink = () => {
+    if (!isAdmin) {
+      openAdminModal();
+      return;
+    }
     setEditingLink(null);
     setIsLinkModalOpen(true);
   };
 
   const handleOpenEditLink = (link: LinkItem) => {
+    if (!isAdmin) {
+      openAdminModal();
+      return;
+    }
     setEditingLink(link);
     setIsLinkModalOpen(true);
   };
@@ -98,11 +122,19 @@ export default function App() {
   };
 
   const handleOpenAddCategory = () => {
+    if (!isAdmin) {
+      openAdminModal();
+      return;
+    }
     setEditingCategory(null);
     setIsCategoryModalOpen(true);
   };
 
   const handleOpenEditCategory = (cat: Category) => {
+    if (!isAdmin) {
+      openAdminModal();
+      return;
+    }
     setEditingCategory(cat);
     setIsCategoryModalOpen(true);
   };
@@ -116,6 +148,10 @@ export default function App() {
   };
 
   const triggerDeleteLink = (id: string) => {
+    if (!isAdmin) {
+      openAdminModal();
+      return;
+    }
     const link = links.find((l) => l.id === id);
     setDeleteConfirm({
       isOpen: true,
@@ -126,6 +162,10 @@ export default function App() {
   };
 
   const triggerDeleteCategory = (id: string) => {
+    if (!isAdmin) {
+      openAdminModal();
+      return;
+    }
     const cat = categories.find((c) => c.id === id);
     setDeleteConfirm({
       isOpen: true,
@@ -142,6 +182,32 @@ export default function App() {
       deleteCategory(deleteConfirm.id);
     }
     setDeleteConfirm({ isOpen: false, type: 'link', id: '', title: '' });
+  };
+
+  const handleUnlockAdmin = async (pwd: string) => {
+    const success = await unlock(pwd);
+    if (success) {
+      showToast('Modo de edição desbloqueado com sucesso! 🔓', 'success');
+    }
+    return success;
+  };
+
+  const handleSetupAdmin = async (pwd: string) => {
+    await setMasterPassword(pwd);
+    showToast('Senha mestre criada e modo de edição ativo! 🛡️', 'success');
+  };
+
+  const handleChangePassword = async (oldPwd: string, newPwd: string) => {
+    const success = await changePassword(oldPwd, newPwd);
+    if (success) {
+      showToast('Senha de administrador atualizada!', 'success');
+    }
+    return success;
+  };
+
+  const handleResetPassword = () => {
+    resetPassword();
+    showToast('Senha de administrador redefinida.', 'info');
   };
 
   const currentCategoryObj = categories.find((c) => c.id === selectedCategory);
@@ -176,8 +242,23 @@ export default function App() {
         theme={theme}
         onThemeToggle={toggleTheme}
         onOpenAddLink={handleOpenAddLink}
-        onOpenImportExport={() => setIsImportExportOpen(true)}
+        onOpenImportExport={() => {
+          if (!isAdmin) {
+            openAdminModal();
+          } else {
+            setIsImportExportOpen(true);
+          }
+        }}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
+        isAdmin={isAdmin}
+        onToggleAdmin={() => {
+          if (isAdmin) {
+            lock();
+            showToast('Painel bloqueado (Modo Leitura ativo) 🔒', 'info');
+          } else {
+            openAdminModal();
+          }
+        }}
       />
 
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 flex gap-6">
@@ -196,6 +277,8 @@ export default function App() {
           stats={stats}
           isMobileOpen={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          isAdmin={isAdmin}
+          onRequireAdmin={openAdminModal}
         />
 
         <main className="flex-1 min-w-0 py-5">
@@ -260,10 +343,8 @@ export default function App() {
             )}
           </div>
 
-          {/* Render links based on view mode */}
           {filteredLinks.length > 0 ? (
             viewMode === 'grid' ? (
-              /* Compact Button Grid (Default) */
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-2.5">
                 {filteredLinks.map((link) => (
                   <LinkCard
@@ -275,11 +356,11 @@ export default function App() {
                     onToggleFavorite={toggleFavorite}
                     onIncrementClicks={incrementClicks}
                     onSelectTag={setSelectedTag}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
             ) : viewMode === 'compact' ? (
-              /* Tile Speed-Dial Grid */
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
                 {filteredLinks.map((link) => (
                   <LinkTile
@@ -290,11 +371,11 @@ export default function App() {
                     onDelete={triggerDeleteLink}
                     onToggleFavorite={toggleFavorite}
                     onIncrementClicks={incrementClicks}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
             ) : (
-              /* Compact List */
               <div className="space-y-2">
                 {filteredLinks.map((link) => (
                   <LinkListRow
@@ -306,6 +387,7 @@ export default function App() {
                     onToggleFavorite={toggleFavorite}
                     onIncrementClicks={incrementClicks}
                     onSelectTag={setSelectedTag}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
@@ -361,6 +443,16 @@ export default function App() {
         }
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteConfirm({ isOpen: false, type: 'link', id: '', title: '' })}
+      />
+
+      <AdminModal
+        isOpen={isAdminModalOpen}
+        mode={adminModalMode}
+        onClose={closeAdminModal}
+        onUnlock={handleUnlockAdmin}
+        onSetup={handleSetupAdmin}
+        onChangePassword={handleChangePassword}
+        onReset={handleResetPassword}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

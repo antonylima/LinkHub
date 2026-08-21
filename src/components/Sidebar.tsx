@@ -31,6 +31,8 @@ interface Props {
   };
   isMobileOpen: boolean;
   onCloseMobile: () => void;
+  isAdmin: boolean;
+  onRequireAdmin: () => void;
 }
 
 export const Sidebar: React.FC<Props> = ({
@@ -48,6 +50,8 @@ export const Sidebar: React.FC<Props> = ({
   stats,
   isMobileOpen,
   onCloseMobile,
+  isAdmin,
+  onRequireAdmin,
 }) => {
   const content = (
     <div className="flex flex-col h-full space-y-6">
@@ -144,13 +148,23 @@ export const Sidebar: React.FC<Props> = ({
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
             Categorias ({categories.length})
           </span>
-          <button
-            onClick={onOpenAddCategory}
-            className="p-1 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
-            title="Criar Nova Categoria"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
+          {isAdmin ? (
+            <button
+              onClick={onOpenAddCategory}
+              className="p-1 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+              title="Criar Nova Categoria"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              onClick={onRequireAdmin}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
+              title="Desbloquear para gerenciar categorias"
+            >
+              <Plus className="w-3.5 h-3.5 opacity-50" />
+            </button>
+          )}
         </div>
 
         <div className="space-y-1 overflow-y-auto max-h-56 pr-1">
@@ -184,25 +198,27 @@ export const Sidebar: React.FC<Props> = ({
                     {cat.count || 0}
                   </span>
 
-                  <div
-                    className="hidden group-hover:flex items-center gap-0.5"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => onEditCategory(cat)}
-                      className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-700"
-                      title="Editar Categoria"
+                  {isAdmin && (
+                    <div
+                      className="hidden group-hover:flex items-center gap-0.5"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <Edit2 className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => onDeleteCategory(cat.id)}
-                      className="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-white dark:hover:bg-slate-700"
-                      title="Excluir Categoria"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
+                      <button
+                        onClick={() => onEditCategory(cat)}
+                        className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-700"
+                        title="Editar Categoria"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteCategory(cat.id)}
+                        className="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-white dark:hover:bg-slate-700"
+                        title="Excluir Categoria"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
