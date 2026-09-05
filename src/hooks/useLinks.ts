@@ -122,7 +122,11 @@ export function useLinks() {
       }
     } catch (err: any) {
       console.error('Erro ao carregar dados do Supabase:', err);
-      showToast('Erro ao carregar dados da nuvem. Usando modo local.', 'error');
+      if (err?.message?.includes('relation "public.categories" does not exist') || err?.code === '42P01') {
+        showToast('Execute o script supabase/schema.sql no SQL Editor do Supabase para criar as tabelas!', 'error');
+      } else {
+        showToast('Erro ao carregar dados da nuvem. Usando modo local.', 'error');
+      }
       setCategories(localCategories);
       setLinks(localLinks);
     } finally {

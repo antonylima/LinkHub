@@ -16,6 +16,7 @@ import { CategoryModal } from './components/CategoryModal';
 import { ImportExportModal } from './components/ImportExportModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { AuthModal } from './components/AuthModal';
+import { AuthPage } from './components/AuthPage';
 import { EmptyState } from './components/EmptyState';
 import { ToastContainer } from './components/ToastContainer';
 import { renderCategoryIcon, getCategoryColor } from './utils/iconHelper';
@@ -25,11 +26,13 @@ import {
   Flame,
   Globe,
   Tag,
+  Bookmark,
 } from 'lucide-react';
 
 function LinkHubContent() {
   const { theme, toggleTheme } = useTheme();
-  const { user, isAuthenticated, isConfigured } = useAuth();
+  const { user, isAuthenticated, isConfigured, loading: authLoading } = useAuth();
+  const [guestMode, setGuestMode] = useState(false);
   const {
     isAdmin: localIsAdmin,
     hasPassword: localHasPassword,
@@ -208,6 +211,23 @@ function LinkHubContent() {
     !selectedTag &&
     !searchQuery.trim() &&
     favoriteLinks.length > 0;
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 animate-bounce mb-4">
+          <Bookmark className="w-6 h-6" />
+        </div>
+        <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 animate-pulse">
+          Carregando LinkHub...
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && !guestMode) {
+    return <AuthPage onContinueAsGuest={() => setGuestMode(true)} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
