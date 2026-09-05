@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useLinks } from './hooks/useLinks';
 import { useTheme } from './hooks/useTheme';
 import { useAdmin } from './hooks/useAdmin';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import type { LinkItem, Category } from './types';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
@@ -13,7 +15,7 @@ import { LinkModal } from './components/LinkModal';
 import { CategoryModal } from './components/CategoryModal';
 import { ImportExportModal } from './components/ImportExportModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
-import { AdminModal } from './components/AdminModal';
+import { AuthModal } from './components/AuthModal';
 import { EmptyState } from './components/EmptyState';
 import { ToastContainer } from './components/ToastContainer';
 import { renderCategoryIcon, getCategoryColor } from './utils/iconHelper';
@@ -25,8 +27,17 @@ import {
   Tag,
 } from 'lucide-react';
 
-export default function App() {
+function LinkHubContent() {
   const { theme, toggleTheme } = useTheme();
+  const { user, isAuthenticated, isConfigured } = useAuth();
+  const {
+    isAdmin: localIsAdmin,
+    hasPassword: localHasPassword,
+    unlock: unlockLocal,
+    setMasterPassword: setupLocal,
+    lock: lockLocal,
+  } = useAdmin();
+
   const {
     links,
     categories,
@@ -35,6 +46,7 @@ export default function App() {
     filteredLinks,
     allTags,
     stats,
+    isSyncing,
     searchQuery,
     setSearchQuery,
     selectedCategory,
@@ -61,19 +73,10 @@ export default function App() {
     clearAllData,
   } = useLinks();
 
-  const {
-    isAdmin,
-    isModalOpen: isAdminModalOpen,
-    modalMode: adminModalMode,
-    openAdminModal,
-    closeAdminModal,
-    unlock,
-    lock,
-    setMasterPassword,
-    changePassword,
-    resetPassword,
-  } = useAdmin();
+  // User can edit if authenticated via Supabase, OR if in local fallback mode and unlocked
+  const canEdit = isAuthenticated || (!isConfigured && localIsAdmin);
 
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
 
@@ -96,8 +99,8 @@ export default function App() {
   });
 
   const handleOpenAddLink = () => {
-    if (!isAdmin) {
-      openAdminModal();
+    if (!canEdit) {
+      setIsAuthModalOpen(true);
       return;
     }
     setEditingLink(null);
@@ -105,8 +108,8 @@ export default function App() {
   };
 
   const handleOpenEditLink = (link: LinkItem) => {
-    if (!isAdmin) {
-      openAdminModal();
+    if (!canEdit) {
+      setIsAuthModalOpen(true);
       return;
     }
     setEditingLink(link);
@@ -122,8 +125,8 @@ export default function App() {
   };
 
   const handleOpenAddCategory = () => {
-    if (!isAdmin) {
-      openAdminModal();
+    if (!canEdit) {
+      setIsAuthModalOpen(true);
       return;
     }
     setEditingCategory(null);
@@ -131,8 +134,8 @@ export default function App() {
   };
 
   const handleOpenEditCategory = (cat: Category) => {
-    if (!isAdmin) {
-      openAdminModal();
+    if (!canEdit) {
+      setIsAuthModalOpen(true);
       return;
     }
     setEditingCategory(cat);
@@ -148,8 +151,8 @@ export default function App() {
   };
 
   const triggerDeleteLink = (id: string) => {
-    if (!isAdmin) {
-      openAdminModal();
+    if (!canEdit) {
+      setIsAuthModalOpen(true);
       return;
     }
     const link = links.find((l) => l.id === id);
@@ -162,8 +165,8 @@ export default function App() {
   };
 
   const triggerDeleteCategory = (id: string) => {
-    if (!isAdmin) {
-      openAdminModal();
+    if (!canEdit) {
+      setIsAuthModalOpen(true);
       return;
     }
     const cat = categories.find((c) => c.id === id);
@@ -182,32 +185,6 @@ export default function App() {
       deleteCategory(deleteConfirm.id);
     }
     setDeleteConfirm({ isOpen: false, type: 'link', id: '', title: '' });
-  };
-
-  const handleUnlockAdmin = async (pwd: string) => {
-    const success = await unlock(pwd);
-    if (success) {
-      showToast('Modo de edição desbloqueado com sucesso! 🔓', 'success');
-    }
-    return success;
-  };
-
-  const handleSetupAdmin = async (pwd: string) => {
-    await setMasterPassword(pwd);
-    showToast('Senha mestre criada e modo de edição ativo! 🛡️', 'success');
-  };
-
-  const handleChangePassword = async (oldPwd: string, newPwd: string) => {
-    const success = await changePassword(oldPwd, newPwd);
-    if (success) {
-      showToast('Senha de administrador atualizada!', 'success');
-    }
-    return success;
-  };
-
-  const handleResetPassword = () => {
-    resetPassword();
-    showToast('Senha de administrador redefinida.', 'info');
   };
 
   const currentCategoryObj = categories.find((c) => c.id === selectedCategory);
@@ -243,22 +220,33 @@ export default function App() {
         onThemeToggle={toggleTheme}
         onOpenAddLink={handleOpenAddLink}
         onOpenImportExport={() => {
-          if (!isAdmin) {
-            openAdminModal();
+          if (!canEdit) {
+            setIsAuthModalOpen(true);
           } else {
             setIsImportExportOpen(true);
           }
         }}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
-        isAdmin={isAdmin}
+        isAdmin={canEdit}
         onToggleAdmin={() => {
-          if (isAdmin) {
-            lock();
-            showToast('Painel bloqueado (Modo Leitura ativo) 🔒', 'info');
+          if (isAuthenticated) {
+            setIsAuthModalOpen(true);
+          } else if (!isConfigured) {
+            if (localIsAdmin) {
+              lockLocal();
+              showToast('Painel bloqueado (Modo Leitura ativo) 🔒', 'info');
+            } else {
+              setIsAuthModalOpen(true);
+            }
           } else {
-            openAdminModal();
+            setIsAuthModalOpen(true);
           }
         }}
+        userEmail={user?.email}
+        isAuthenticated={isAuthenticated}
+        isConfigured={isConfigured}
+        isSyncing={isSyncing}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       />
 
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 flex gap-6">
@@ -277,8 +265,8 @@ export default function App() {
           stats={stats}
           isMobileOpen={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
-          isAdmin={isAdmin}
-          onRequireAdmin={openAdminModal}
+          isAdmin={canEdit}
+          onRequireAdmin={() => setIsAuthModalOpen(true)}
         />
 
         <main className="flex-1 min-w-0 py-5">
@@ -356,7 +344,7 @@ export default function App() {
                     onToggleFavorite={toggleFavorite}
                     onIncrementClicks={incrementClicks}
                     onSelectTag={setSelectedTag}
-                    isAdmin={isAdmin}
+                    isAdmin={canEdit}
                   />
                 ))}
               </div>
@@ -371,7 +359,7 @@ export default function App() {
                     onDelete={triggerDeleteLink}
                     onToggleFavorite={toggleFavorite}
                     onIncrementClicks={incrementClicks}
-                    isAdmin={isAdmin}
+                    isAdmin={canEdit}
                   />
                 ))}
               </div>
@@ -387,7 +375,7 @@ export default function App() {
                     onToggleFavorite={toggleFavorite}
                     onIncrementClicks={incrementClicks}
                     onSelectTag={setSelectedTag}
-                    isAdmin={isAdmin}
+                    isAdmin={canEdit}
                   />
                 ))}
               </div>
@@ -445,17 +433,24 @@ export default function App() {
         onCancel={() => setDeleteConfirm({ isOpen: false, type: 'link', id: '', title: '' })}
       />
 
-      <AdminModal
-        isOpen={isAdminModalOpen}
-        mode={adminModalMode}
-        onClose={closeAdminModal}
-        onUnlock={handleUnlockAdmin}
-        onSetup={handleSetupAdmin}
-        onChangePassword={handleChangePassword}
-        onReset={handleResetPassword}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        localIsAdmin={localIsAdmin}
+        localHasPassword={localHasPassword}
+        onLocalUnlock={unlockLocal}
+        onLocalSetup={setupLocal}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <LinkHubContent />
+    </AuthProvider>
   );
 }

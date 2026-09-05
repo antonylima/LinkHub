@@ -30,3 +30,34 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+---
+
+## 🚀 Conexão com Supabase (Login & Persistência)
+
+O LinkHub está preparado para autenticação e persistência na nuvem com o **Supabase**.
+
+### 1. Configurar credenciais no `.env`
+Crie ou edite o arquivo `.env` na raiz do projeto com as credenciais do seu projeto Supabase:
+
+```env
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_ANON_KEY=sua-chave-anon-publica
+```
+
+> **Onde encontrar**: No dashboard do Supabase em **Project Settings** > **API** (Project URL e `anon public` key).
+
+### 2. Criar as Tabelas e Políticas de Segurança (RLS)
+1. Acesse o **SQL Editor** no painel do seu projeto Supabase.
+2. Abra o arquivo [`supabase/schema.sql`](supabase/schema.sql) deste repositório.
+3. Copie todo o conteúdo, cole no SQL Editor do Supabase e clique em **Run**.
+
+Isso criará automaticamente:
+- A tabela `categories` com Row Level Security (RLS)
+- A tabela `links` com Row Level Security (RLS)
+- Índices de performance e regras de integridade referencial com `auth.users`
+
+### 3. Utilização
+- **Com Supabase configurado**: Os usuários podem criar contas, fazer login, redefinir senhas e seus links e categorias ficarão salvos na nuvem e isolados por usuário.
+- **Modo Convidado / Fallback**: Se as chaves não forem configuradas ou a rede estiver indisponível, o sistema funciona perfeitamente utilizando o armazenamento local (`localStorage`).
+
