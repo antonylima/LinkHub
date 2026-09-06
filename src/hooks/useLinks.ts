@@ -246,6 +246,27 @@ export function useLinks() {
     }
   }, [isAuthenticated, isConfigured, user, setLocalLinks, showToast]);
 
+  const deleteLinks = useCallback(async (ids: string[]) => {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+
+    setLinks((prev) => prev.filter((l) => !idSet.has(l.id)));
+
+    if (isConfigured && isAuthenticated && user?.id) {
+      try {
+        const { error } = await supabase.from('links').delete().in('id', ids);
+        if (error) throw error;
+        showToast(`${ids.length} links removidos do Supabase.`, 'info');
+      } catch (err: any) {
+        console.error('Erro ao excluir links em lote:', err);
+        showToast(`Erro ao remover links: ${err.message}`, 'error');
+      }
+    } else {
+      setLocalLinks((prev) => prev.filter((l) => !idSet.has(l.id)));
+      showToast(`${ids.length} links removidos localmente.`, 'info');
+    }
+  }, [isAuthenticated, isConfigured, user, setLocalLinks, showToast]);
+
   const toggleFavorite = useCallback(async (id: string) => {
     let nextFav = false;
     let title = '';
@@ -448,6 +469,7 @@ export function useLinks() {
         url: item.url || 'https://',
         description: item.description || '',
         categoryId: catId,
+        customIcon: item.customIcon,
         tags: item.tags || [],
         isFavorite: Boolean(item.isFavorite),
         clicks: item.clicks || 0,
@@ -468,14 +490,23 @@ export function useLinks() {
           url: l.url,
           description: l.description || null,
           tags: l.tags || [],
+          custom_icon: l.customIcon || null,
           is_favorite: l.isFavorite,
           clicks: l.clicks,
         }));
-        await supabase.from('links').insert(dbLinks);
+
+        // Batch inserts in chunks of 50 for safety with large files
+        const batchSize = 50;
+        for (let i = 0; i < dbLinks.length; i += batchSize) {
+          const chunk = dbLinks.slice(i, i + batchSize);
+          const { error } = await supabase.from('links').insert(chunk);
+          if (error) throw error;
+        }
+
         showToast(`${formatted.length} links importados e sincronizados no Supabase!`, 'success');
-      } catch (err) {
+      } catch (err: any) {
         console.error('Erro ao importar links no Supabase:', err);
-        showToast(`${formatted.length} links importados localmente (erro na nuvem)`, 'info');
+        showToast(`${formatted.length} links importados localmente (aviso nuvem: ${err.message})`, 'info');
       }
     } else {
       showToast(`${formatted.length} links importados com sucesso!`, 'success');
@@ -634,6 +665,7 @@ export function useLinks() {
     addLink,
     updateLink,
     deleteLink,
+    deleteLinks,
     toggleFavorite,
     incrementClicks,
     addCategory,

@@ -18,6 +18,7 @@ import {
   User,
   LogIn,
   RefreshCw,
+  CheckSquare,
 } from 'lucide-react';
 import type { ThemeMode } from '../hooks/useTheme';
 
@@ -38,6 +39,9 @@ interface Props {
   isConfigured?: boolean;
   isSyncing?: boolean;
   onOpenAuth: () => void;
+  isSelectionMode?: boolean;
+  onToggleSelectionMode?: () => void;
+  selectedCount?: number;
 }
 
 export const Navbar: React.FC<Props> = ({
@@ -57,6 +61,9 @@ export const Navbar: React.FC<Props> = ({
   isConfigured,
   isSyncing,
   onOpenAuth,
+  isSelectionMode,
+  onToggleSelectionMode,
+  selectedCount,
 }) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -226,6 +233,24 @@ export const Navbar: React.FC<Props> = ({
               title={isAdmin ? 'Modo Local Desbloqueado' : 'Modo Local Bloqueado'}
             >
               {isAdmin ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+            </button>
+          )}
+
+          {/* Multi-selection toggle button */}
+          {isAdmin && onToggleSelectionMode && (
+            <button
+              onClick={onToggleSelectionMode}
+              className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                isSelectionMode
+                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+              title={isSelectionMode ? 'Sair da seleção em lote' : 'Selecionar múltiplos links para apagar'}
+            >
+              <CheckSquare className="w-3.5 h-3.5" />
+              <span className="hidden md:inline text-[11px]">
+                {isSelectionMode && selectedCount ? `${selectedCount} sel.` : 'Selecionar'}
+              </span>
             </button>
           )}
 

@@ -19,6 +19,7 @@ import { AuthModal } from './components/AuthModal';
 import { AuthPage } from './components/AuthPage';
 import { EmptyState } from './components/EmptyState';
 import { ToastContainer } from './components/ToastContainer';
+import { BulkActionBar } from './components/BulkActionBar';
 import { renderCategoryIcon, getCategoryColor } from './utils/iconHelper';
 import {
   X,
@@ -74,6 +75,7 @@ function LinkHubContent() {
     importData,
     resetToDemo,
     clearAllData,
+    deleteLinks,
   } = useLinks();
 
   // User can edit if authenticated via Supabase, OR if in local fallback mode and unlocked
@@ -88,6 +90,9 @@ function LinkHubContent() {
 
   const [isImportExportOpen, setIsImportExportOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const [selectedLinkIds, setSelectedLinkIds] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
@@ -181,9 +186,55 @@ function LinkHubContent() {
     });
   };
 
+  const handleToggleSelect = (id: string) => {
+    setSelectedLinkIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedLinkIds(new Set(filteredLinks.map((l) => l.id)));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedLinkIds(new Set());
+  };
+
+  const handleToggleSelectionMode = () => {
+    setIsSelectionMode((prev) => {
+      if (!prev) {
+        // Entrando no modo seleção: pré-seleciona todos os links do filtro atual
+        setSelectedLinkIds(new Set(filteredLinks.map((l) => l.id)));
+      } else {
+        setSelectedLinkIds(new Set());
+      }
+      return !prev;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    const ids = Array.from(selectedLinkIds);
+    setDeleteConfirm({
+      isOpen: true,
+      type: 'link',
+      id: ids.join(','),
+      title: `Excluir ${ids.length} link${ids.length !== 1 ? 's' : ''} selecionado${ids.length !== 1 ? 's' : ''}?`,
+    });
+  };
+
   const handleConfirmDelete = () => {
     if (deleteConfirm.type === 'link') {
-      deleteLink(deleteConfirm.id);
+      const ids = deleteConfirm.id.split(',');
+      if (ids.length > 1) {
+        deleteLinks(ids);
+        setSelectedLinkIds(new Set());
+        setIsSelectionMode(false);
+      } else {
+        deleteLink(deleteConfirm.id);
+      }
     } else if (deleteConfirm.type === 'category') {
       deleteCategory(deleteConfirm.id);
     }
@@ -267,6 +318,9 @@ function LinkHubContent() {
         isConfigured={isConfigured}
         isSyncing={isSyncing}
         onOpenAuth={() => setIsAuthModalOpen(true)}
+        isSelectionMode={isSelectionMode}
+        onToggleSelectionMode={handleToggleSelectionMode}
+        selectedCount={selectedLinkIds.size}
       />
 
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 flex gap-6">
@@ -365,6 +419,9 @@ function LinkHubContent() {
                     onIncrementClicks={incrementClicks}
                     onSelectTag={setSelectedTag}
                     isAdmin={canEdit}
+                    isSelectionMode={isSelectionMode}
+                    isSelected={selectedLinkIds.has(link.id)}
+                    onToggleSelect={handleToggleSelect}
                   />
                 ))}
               </div>
@@ -380,6 +437,9 @@ function LinkHubContent() {
                     onToggleFavorite={toggleFavorite}
                     onIncrementClicks={incrementClicks}
                     isAdmin={canEdit}
+                    isSelectionMode={isSelectionMode}
+                    isSelected={selectedLinkIds.has(link.id)}
+                    onToggleSelect={handleToggleSelect}
                   />
                 ))}
               </div>
@@ -396,6 +456,9 @@ function LinkHubContent() {
                     onIncrementClicks={incrementClicks}
                     onSelectTag={setSelectedTag}
                     isAdmin={canEdit}
+                    isSelectionMode={isSelectionMode}
+                    isSelected={selectedLinkIds.has(link.id)}
+                    onToggleSelect={handleToggleSelect}
                   />
                 ))}
               </div>
@@ -461,6 +524,18 @@ function LinkHubContent() {
         onLocalUnlock={unlockLocal}
         onLocalSetup={setupLocal}
       />
+
+      {isSelectionMode && (
+        <BulkActionBar
+          selectedCount={selectedLinkIds.size}
+          totalVisibleCount={filteredLinks.length}
+          isAllSelected={selectedLinkIds.size === filteredLinks.length && filteredLinks.length > 0}
+          onSelectAll={handleSelectAll}
+          onClearSelection={handleClearSelection}
+          onDeleteSelected={handleBulkDelete}
+          onCloseSelectionMode={handleToggleSelectionMode}
+        />
+      )}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
